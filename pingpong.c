@@ -57,9 +57,12 @@ queue_t *queue_remove (queue_t **queue, queue_t *elem) {
 }
 
 void pingpong_init(){
+	queue_t main_q;
 	tasks_id = -1;
 	tasks_q = NULL;
-	task_create(&main_t, main(), NULL);
+	getcontext(&main_t);
+	main_q->task = &main_t;
+	queue_append((queue_t**)&tasks_q,&main_q);
 	//task_switch(&main_t);
 }
 
