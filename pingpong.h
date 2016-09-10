@@ -16,7 +16,7 @@
 // Inicializa o sistema operacional; deve ser chamada no inicio do main()
 void pingpong_init () ;
 
-void queue_append (queue_t **queue, queue_t *elem) ;
+void queue_append (task_t *queue, task_t *elem) ;
 queue_t *queue_remove (queue_t **queue, queue_t *elem) ;
 // gerência de tarefas =========================================================
 
