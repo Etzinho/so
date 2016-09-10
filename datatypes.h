@@ -16,6 +16,8 @@
 typedef struct task_t
 {
 	ucontext_t context;
+	struct task_t *prev;
+	struct task_t *next;
 	int id;
 } task_t ;
 
@@ -50,8 +52,7 @@ typedef struct
   // preencher quando necessário
 } mqueue_t ;
 
-queue_t *tasks_q;
+task_t tasks_q;
 int tasks_id;
 int task_now;
-task_t main_t;
 #endif
