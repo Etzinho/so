@@ -1,26 +1,21 @@
 #include "pingpong.h"
 
-void queue_append (queue_t **queue, queue_t *elem) {
-    if ((queue != NULL) //&& (*queue != NULL)
-        && (elem != NULL)
-        && (elem->next == NULL) && (elem->prev == NULL)) {
-        
-        if (*queue == NULL) {
+void queue_append (task_t *queue, task_t *elem) {
+        if (queue == NULL) {
             // primeira insercao
-            *queue = elem;
+            queue = elem;
             elem->next = elem;
             elem->prev = elem;
         }
         else {
             // demais insercoes = insere no fim
-            queue_t *aux = (*queue)->prev; // ultimo elemento
+            task_t *aux = queue->prev; // ultimo elemento
             aux->next = elem; // insere elemento no final
-            elem->next = *queue; // proximo do ultimo elmento eh o primeiro
+            elem->next = queue; // proximo do ultimo elmento eh o primeiro
             elem->prev = aux; // anterior do elemento inserido eh o "antigo" ultimo elemento
-            (*queue)->prev = elem; // anterior do primeiro elemento eh o ultimo
+            queue->prev = elem; // anterior do primeiro elemento eh o ultimo
         }
     }
-}
 
 queue_t *queue_remove (queue_t **queue, queue_t *elem) {
     if ((queue != NULL) && (*queue != NULL) // fila existe?
@@ -37,7 +32,7 @@ queue_t *queue_remove (queue_t **queue, queue_t *elem) {
             // (apenas acerta os apontamentos
             elem->next->prev = elem->prev;
             elem->prev->next = elem->next;
-            
+
             if (*queue == elem) {
                 // o elemento removido eh o primeiro
                 // precisa acertar a cabeca da lista
@@ -47,7 +42,7 @@ queue_t *queue_remove (queue_t **queue, queue_t *elem) {
                     // a lista deve ficar vazia
                     *queue = NULL;
             }
-            
+
             // desconecta o elemento da lista
             elem->prev = elem->next = NULL;
             return elem;
@@ -57,21 +52,27 @@ queue_t *queue_remove (queue_t **queue, queue_t *elem) {
 }
 
 void pingpong_init(){
-	queue_t main_q;
-	tasks_id = -1;
-	tasks_q = NULL;
-	getcontext(&main_t);
-	main_q->task = &main_t;
-	queue_append((queue_t**)&tasks_q,&main_q);
-	//task_switch(&main_t);
+	char* stack;
+	tasks_id = 0;
+	task_now = tasks_id;
+	getcontext(&(tasks_q.context));
+	stack = malloc (STACKSIZE) ;
+	if (stack)
+	{
+	  tasks_q.context.uc_stack.ss_sp = stack ;
+	  tasks_q.context.uc_stack.ss_size = STACKSIZE;
+	  tasks_q.context.uc_stack.ss_flags = 0;
+	  tasks_q.context.uc_link = 0;
+	}
+	tasks_q.id = 0;
+	tasks_q.next = &tasks_q;
+	tasks_q.prev = &tasks_q;
 }
 
 
 int task_create (task_t *task,void (*start_func)(void *),void *arg){
-	queue_t task_q;
 	int task_id;
 	char* stack;
-	
 	getcontext(&(task->context));
 	stack = malloc (STACKSIZE) ;
 	if (stack)
@@ -86,44 +87,30 @@ int task_create (task_t *task,void (*start_func)(void *),void *arg){
 	  perror ("Erro na criação da pilha: ");
 	  exit (-1);
 	}
-
-	makecontext (&(task->context), (void*)(*start_func), 1, (void*) arg);
+	makecontext (&(task->context), (void*)start_func, 1, (void*) arg);
 	tasks_id++;
 	task->id = tasks_id;
-	task_q.task = task;
-	queue_append((queue_t**)&tasks_q,&task_q);
-	return task_id;	
+	task->next = NULL;
+	task->prev = NULL;
+	queue_append(&tasks_q,task);
+	return task_id;
 }
 
 int task_switch(task_t* task){
-	queue_t *aux = tasks_q->next;
-	while(aux != tasks_q){
-		if(aux->task->id == task_id()){
-			swapcontext(&(aux->task->context),&task->context);
-			task_now = task->id;
-			return 0;
-		}
-		aux = aux->next;
+	task_t * aux;
+	aux = &tasks_q;
+	do {
+	if(aux->id == task_id()){
+		task_now = task->id;
+		swapcontext(&aux->context,&task->context);
+		return 0;
 	}
+	aux = aux->next;}while(aux->id != tasks_q.id);
 	return -1;
 }
 
 void task_exit(int exit_code){
-	if(task_id() == 0){
-	exit(0);
-	}
-	else{
-	task_switch(&main_t);
-	}
-	//queue_t *aux = tasks_q->next;
-	//while(aux != tasks_q){
-	//	if(aux->task->id == task_id()){
-	//		task_switch(&main_t);
-	//		//free(aux->task);
-	//		//free(aux);
-	//	}
-	//	aux = aux->next;
-	//}
+	task_switch(&tasks_q);
 }
 
 int task_id(){return task_now;}
