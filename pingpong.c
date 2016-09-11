@@ -53,8 +53,9 @@ queue_t *queue_remove (queue_t **queue, queue_t *elem) {
 
 void pingpong_init(){
 	char* stack;
-	tasks_id = 0;
-	task_now = tasks_id;
+	tasks_id = 0; //inicia interador para id das tasks
+	task_now = tasks_id; //seta tarefa atual a tarefa main
+	//inicia as variaveis da tarefa main
 	getcontext(&(tasks_q.context));
 	stack = malloc (STACKSIZE) ;
 	if (stack)
@@ -73,6 +74,7 @@ void pingpong_init(){
 int task_create (task_t *task,void (*start_func)(void *),void *arg){
 	int task_id;
 	char* stack;
+	//seta contexto da task
 	getcontext(&(task->context));
 	stack = malloc (STACKSIZE) ;
 	if (stack)
@@ -88,20 +90,23 @@ int task_create (task_t *task,void (*start_func)(void *),void *arg){
 	  exit (-1);
 	}
 	makecontext (&(task->context), (void*)start_func, 1, (void*) arg);
+	//cria id da nova task
 	tasks_id++;
 	task->id = tasks_id;
 	task->next = NULL;
 	task->prev = NULL;
+	//aloca a tarefa na fila da task main
 	queue_append(&tasks_q,task);
 	return task_id;
 }
 
 int task_switch(task_t* task){
 	task_t * aux;
+	//ponteiro para o começo da fila de tasks
 	aux = &tasks_q;
 	do {
-	if(aux->id == task_id()){
-		task_now = task->id;
+	if(aux->id == task_id()){//procura na fila de tasks a tarefa atual
+		task_now = task->id;//seta a task atual a task a ser trocada
 		swapcontext(&aux->context,&task->context);
 		return 0;
 	}
@@ -110,8 +115,8 @@ int task_switch(task_t* task){
 }
 
 void task_exit(int exit_code){
-	task_switch(&tasks_q);
+	task_switch(&tasks_q);//retorna para task main
 }
 
-int task_id(){return task_now;}
+int task_id(){return task_now;}//retorna id da task atual
 
