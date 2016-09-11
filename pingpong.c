@@ -68,6 +68,8 @@ void pingpong_init(){
 	tasks_q.id = 0;
 	tasks_q.next = &tasks_q;
 	tasks_q.prev = &tasks_q;
+	/* desativa o buffer da saida padrao (stdout), usado pela função printf */
+	setvbuf (stdout, 0, _IONBF, 0) ;
 	#ifdef DEBUG
 	printf("pinpong_init(): criou a task main id %d\n",tasks_q.id);
 	#endif
