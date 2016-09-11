@@ -68,6 +68,9 @@ void pingpong_init(){
 	tasks_q.id = 0;
 	tasks_q.next = &tasks_q;
 	tasks_q.prev = &tasks_q;
+	#ifdef DEBUG
+	printf("pinpong_init(): criou a task main id %d\n",tasks_q.id);
+	#endif
 }
 
 
@@ -97,6 +100,9 @@ int task_create (task_t *task,void (*start_func)(void *),void *arg){
 	task->prev = NULL;
 	//aloca a tarefa na fila da task main
 	queue_append(&tasks_q,task);
+	#ifdef DEBUG
+	printf("task_create(): criou a task %d\n",task->id);
+	#endif
 	return task_id;
 }
 
@@ -108,6 +114,9 @@ int task_switch(task_t* task){
 	if(aux->id == task_id()){//procura na fila de tasks a tarefa atual
 		task_now = task->id;//seta a task atual a task a ser trocada
 		swapcontext(&aux->context,&task->context);
+		#ifdef DEBUG
+		printf("task_switch(): trocou contexto task %d -> %d\n",aux->.id,task->id);
+		#endif
 		return 0;
 	}
 	aux = aux->next;}while(aux->id != tasks_q.id);
@@ -115,6 +124,9 @@ int task_switch(task_t* task){
 }
 
 void task_exit(int exit_code){
+	#ifdef DEBUG
+	printf("task_exit(): encerrou a tarefa %d\n",task_id());
+	#endif
 	task_switch(&tasks_q);//retorna para task main
 }
 
