@@ -1,5 +1,7 @@
 #include "pingpong.h"
 task_t Dispatcher;
+task_t* task_running;
+int lock;
 
 void queue_append (task_t **queue, task_t *elem) {
         if (*queue == NULL) {
@@ -44,8 +46,8 @@ task_t* queue_remove (task_t **queue, task_t *elem) {
 void pingpong_init(){
 	char* stack;
 	queue_t = NULL;
+	lock = 0;
 	tasks_id = 0; //inicia interador para id das tasks
-	task_now = tasks_id; //seta tarefa atual a tarefa main
 	//inicia as variaveis da tarefa main
 	getcontext(&(tasks_q.context));
 	stack = malloc (STACKSIZE) ;
@@ -65,6 +67,7 @@ void pingpong_init(){
 	tasks_q.user = 1;
 	tasks_q.quantum = 20;
 	queue_append(&queue_t,&tasks_q);
+	task_running = &tasks_q;
 	/* desativa o buffer da saida padrao (stdout), usado pela função printf */
 	//setvbuf (stdout, 0, _IONBF, 0) ;
 	#ifdef DEBUG
@@ -82,7 +85,7 @@ void pingpong_init(){
 	}
 	timer.it_value.tv_usec = 1 ;      // primeiro disparo, em micro-segundos
 	timer.it_value.tv_sec  = 0 ;      // primeiro disparo, em segundos
-	timer.it_interval.tv_usec = 1000 ;   // disparos subsequentes, em micro-segundos
+	timer.it_interval.tv_usec = 1000;   // disparos subsequentes, em micro-segundos
 	timer.it_interval.tv_sec  = 0 ;   // disparos subsequentes, em segundos
 	if (setitimer (ITIMER_REAL, &timer, 0) < 0)
 	{
@@ -130,36 +133,28 @@ int task_create (task_t *task,void (*start_func)(void *),void *arg){
 }
 
 int task_switch(task_t* task){
-	task_t * aux;
-	//ponteiro para o começo da fila de tasks
-	aux = queue_t;
-	do {
-	if(aux->id == task_id()){//procura na fila de tasks a tarefa atual
-		task_now = task->id;//seta a task atual a task a ser trocada
-		#ifdef DEBUG
-		printf("task_switch(): trocou contexto task %d -> %d\n",aux->id,task->id);
-		#endif
-		queue_remove(&queue_t,aux);
-		if(aux->morreu==0){queue_append(&queue_t,aux);}
-		task->quantum = 20;
-		swapcontext(&aux->context,&task->context);
-		return 0;
-	}
-	aux = aux->next;}while(aux->id != queue_t->id);
-	return -1;
+	task_t* aux = task_running;
+	#ifdef DEBUG
+	printf("task_switch(): trocou contexto task %d -> %d\n",task_running->id,task->id);
+	#endif
+	queue_remove(&queue_t,task_running);
+	if(task_running->morreu==0){queue_append(&queue_t,task_running);}
+	task_running->quantum = 20;
+	task_running = task;
+	swapcontext(&aux->context,&task->context);
+	lock = 0;
+	return 0;
 }
 
 void task_exit(int exit_code){
 	#ifdef DEBUG
 	printf("task_exit(): encerrou a tarefa %d\n",task_id());
 	#endif
-	task_t *aux = queue_t;
-	task_t *ended = queue_t;
 	if(task_id() == 1){
 		task_switch(&tasks_q);
 	}
 	else{
-		do {
+	/*	do {
 		if(aux->id == 1){//procura na fila de tasks a tarefa atual
 			do{	
 			if(ended->id == task_id()){
@@ -168,12 +163,14 @@ void task_exit(int exit_code){
 			ended = ended->next;}while(ended->id != queue_t->id);
 			task_switch(aux);
 		}
-		aux = aux->next;}while(aux->id != queue_t->id);
+		aux = aux->next;}while(aux->id != queue_t->id);*/
+		task_running->morreu = 1;
+		task_switch(&Dispatcher);
 	}
 	//task_switch(&tasks_q);//retorna para task main
 }
 
-int task_id(){return task_now;}//retorna id da task atual
+int task_id(){return task_running->id;}//retorna id da task atual
 
 void dispatcher_body(){
 	task_t *schedu = NULL;
@@ -243,21 +240,17 @@ int task_getprio (task_t *task){
 }
 
 void tratador(int signum){
-	task_t* task;
-	task_t* aux = queue_t;
-	do{
-		if(aux->id == task_id()){
-			break;
+	if(lock == 0){
+		lock = 1;
+		if(task_running->user == 1){
+			if(task_running->quantum == 0){
+				task_running->quantum--;
+				task_switch(&Dispatcher);
+			}
+			else if(task_running->quantum > 0){
+				task_running->quantum--;
+			}
 		}
-	aux = aux->next;}while(aux->id != queue_t->id);
-	task = aux;
-	if(task->user == 1){
-		if(task->quantum == 0){
-			task->quantum--;
-			task_switch(&Dispatcher);
-		}
-		else if(task->quantum > 0){
-			task->quantum--;
-		}
+		lock = 0;
 	}
 }
