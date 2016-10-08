@@ -141,8 +141,8 @@ int task_switch(task_t* task){
 	if(task_running->morreu==0){queue_append(&queue_t,task_running);}
 	task_running->quantum = 20;
 	task_running = task;
-	swapcontext(&aux->context,&task->context);
 	lock = 0;
+	swapcontext(&aux->context,&task->context);
 	return 0;
 }
 
