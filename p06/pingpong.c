@@ -170,9 +170,9 @@ void task_exit(int exit_code){
 	unsigned int time;
 	if(task_id() == 1){
 		task_running->morreu = 1;
-		//time = systime() - task_running->tick_ini;
+		time = systime() - task_running->tick_ini;
 		task_running->exec_time = systime() - task_running->exec_time;
-		//task_running->proc_time += time;
+		task_running->proc_time += time;
 		printf("Task %d exit: running time %u ms, cpu time %u ms, %d activations.\n", task_running->id, task_running->exec_time, task_running->proc_time, task_running->activations);
 		task_switch(&tasks_q);
 	}
@@ -188,9 +188,9 @@ void task_exit(int exit_code){
 		}
 		aux = aux->next;}while(aux->id != queue_t->id);*/
 		task_running->morreu = 1;
-		//time = systime() - task_running->tick_ini;
+		time = systime() - task_running->tick_ini;
 		task_running->exec_time = systime() - task_running->exec_time;
-		//task_running->proc_time += time;
+		task_running->proc_time += time;
 		printf("Task %d exit: running time %u ms, cpu time %u ms, %d activations.\n", task_running->id, task_running->exec_time, task_running->proc_time, task_running->activations);
 		task_switch(&Dispatcher);
 	}
