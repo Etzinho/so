@@ -22,7 +22,7 @@ typedef struct task_t
 	struct task_t *prev;
 	struct task_t *next;
 	int id, morreu, prio_static, prio_din, user, quantum, activations;
-	unsigned int exec_time, proc_time, tick_ini, tick_fim;
+	unsigned int exec_time, proc_time;
 } task_t ;
 
 /*typedef struct queue_t
