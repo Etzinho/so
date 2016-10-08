@@ -70,7 +70,6 @@ void pingpong_init(){
 	tasks_q.activations = 0;
 	tasks_q.exec_time = systime();
 	tasks_q.proc_time = 0;
-	tasks_q.tick_ini = 0;
 	queue_append(&queue_t,&tasks_q);
 	task_running = &tasks_q;
 	/* desativa o buffer da saida padrao (stdout), usado pela função printf */
@@ -131,7 +130,6 @@ int task_create (task_t *task,void (*start_func)(void *),void *arg){
 	task->activations = 0;
 	task->exec_time = systime();
 	task->proc_time = 0;
-	task->tick_ini = 0;
 	if(task->id == Dispatcher.id){task->user = 0;}
 	//aloca a tarefa na fila da task main
 	queue_append(&queue_t,task);
@@ -150,16 +148,12 @@ int task_switch(task_t* task){
 	queue_remove(&queue_t,task_running);
 	if(task_running->morreu==0){
 		queue_append(&queue_t,task_running);
-		task_running->tick_fim = systime();
-		time = task_running->tick_fim - task_running->tick_ini;
-		task_running->proc_time += time;
 		task_running->quantum = 20;
 	}
 	task_running = task;
 	lock = 0;
 	swapcontext(&aux->context,&task->context);
 	task->activations++;
-	task->tick_ini = systime();
 	return 0;
 }
 
@@ -170,9 +164,7 @@ void task_exit(int exit_code){
 	unsigned int time;
 	if(task_id() == 1){
 		task_running->morreu = 1;
-		time = systime() - task_running->tick_ini;
 		task_running->exec_time = systime() - task_running->exec_time;
-		task_running->proc_time += time;
 		printf("Task %d exit: running time %u ms, cpu time %u ms, %d activations.\n", task_running->id, task_running->exec_time, task_running->proc_time, task_running->activations);
 		task_switch(&tasks_q);
 	}
@@ -187,10 +179,8 @@ void task_exit(int exit_code){
 			task_switch(aux);
 		}
 		aux = aux->next;}while(aux->id != queue_t->id);*/
-		task_running->morreu = 1;
-		time = systime() - task_running->tick_ini;
+		task_running->morreu = 1;;
 		task_running->exec_time = systime() - task_running->exec_time;
-		task_running->proc_time += time;
 		printf("Task %d exit: running time %u ms, cpu time %u ms, %d activations.\n", task_running->id, task_running->exec_time, task_running->proc_time, task_running->activations);
 		task_switch(&Dispatcher);
 	}
@@ -252,6 +242,7 @@ int task_getprio (task_t *task){
 void tratador(int signum){
 	tick++;
 	if(lock == 0){
+		task_running->proc_time++;
 		lock = 1;
 		if(task_running->user == 1){
 			if(task_running->quantum == 0){
